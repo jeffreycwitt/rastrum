@@ -1,0 +1,102 @@
+#!/usr/bin/env ruby
+require "bundler/setup"
+require "rastrum"
+require "thor"
+
+module RastrumCLI
+	class Release < Thor
+		desc "draft", "perform release procedure"
+		long_desc <<-LONGDESC
+      This command performs a draft release for the contents of this directory. The procedure will run through every
+      tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "draft."
+
+      After completing the xml file updates, the procedure will commit the repository and tag it (e.g. v0.2.0).
+
+      It will end by pushing the repository to the development respository, specified as git remote origin.
+
+      -i, with -i opition, this procedure will be interactive, prompting the user for confirmation before each change to each file within the directory.
+
+      -q, with the -q option, all notices of what the procedure is doing will be silenced. The default is to be verbose.
+
+      LONGDESC
+		def draft
+		puts "performs draft procedure"
+		end
+		desc "review", "perform release procedure"
+		long_desc <<-LONGDESC
+      This command performs a review-version release for the contents of this directory. The procedure will run through every tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "review-version." 
+
+      After completing the xml file updates, the procedure will commit the repository and tag it (e.g. v0.2.0).
+
+      It will end by pushing the repository to both to the development respository, specified as git remote origin, and the review repository specified as git remote dll
+
+      -i, with -i opition, this procedure will be interactive, prompting the user for confirmation before each change to each file within the directory.
+
+      -q, with the -q option, all notices of what the procedure is doing will be silenced. The default is to be verbose.
+
+      LONGDESC
+		def review
+		puts "performs review-version procedure"
+		end
+		desc "published", "performs published procedure"
+		long_desc <<-LONGDESC
+      This command performs a published release for the contents of this directory. The procedure will run through every tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "published."
+
+      After completing the xml file updates, the procedure will commit the repository and tag it (e.g. v1.0.0).
+
+      If the current respository only has a master branch, it will create a new branch called "develop" and checkout to this branch where all subsequent development should be done. 
+
+      If release published is called when already on a development branch, the release published command will merge the development branch into the master branch, and the checkout back out to the development branch, changing the status of the devleopment texts back to "draft" and the edition number to x.x.x-dev.
+
+      It will end by pushing the repository to both to the development respository, specified as git remote origin, and the review repository specified as git remote dll
+
+      -i, with -i opition, this procedure will be interactive, prompting the user for confirmation before each change to each file within the directory.
+
+      -q, with the -q option, all notices of what the procedure is doing will be silenced. The default is to be verbose.
+
+      LONGDESC
+		def published
+		puts "performs published procedure"
+		end
+	end
+	class Hotfix < Thor
+		desc "new", "creates new hotfix"
+		def new
+		puts "creates new hotfix"
+		end
+		desc "release", "releases hotfix"
+		def release
+		puts "releases hotfix"
+		end
+	end
+
+	class Core < Thor
+		
+		desc "version", "ask for rastrum version"
+		def version
+		puts Rastrum::VERSION
+		end
+		desc "new", "create new repository"
+		def new(name)
+			puts "create new respository called #{name} with starter files"
+		end
+		desc "create", "create new file"
+		def create(filetype, name)
+			puts "creates a new file from template 
+			based on filetype (#{filetype} called #{name}"
+		end
+		desc "update", "perform update procedure"
+		def update
+			puts "creates processed files, commits, and pushes"
+		end
+		desc "release", "controls release, with version and status updates"
+		subcommand "release", Release
+
+		desc "hotfix", "manages hotfix creation and merge"
+		subcommand "hotfix", Hotfix
+	end
+
+	
+end
+
+RastrumCLI::Core.start(ARGV)
