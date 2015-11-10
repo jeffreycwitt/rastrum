@@ -77,9 +77,19 @@ module RastrumCLI
 		puts Rastrum::VERSION
 		end
 		desc "new", "create new repository"
+		long_desc <<-LONGDESC
+			"rastrum new <reponame>" creates a new repository with dummy tei files, specified in the configuration options. Additionally, the new command will create dummy readme file, a Rastrumfile for further customaization, a version.xml file. 
+
+			Finally it initate a git repository and commit a "first commit"
+		LONGDESC
 		def new(name)
 			puts "create new respository called #{name} with starter files"
 		end
+		long_desc <<-LONGDESC
+			"rastrum create <filetype> <name>" creates a new file according to a filetype designation in the Rastrumfile or in the global config settings. It's a useful command for quickly creating a new starter transcription"
+
+			--dup, the duplicate command allows the user to create a new transcription file from a copy of an existing transcription, usually an existing transcription of another witness, while changing the file name relevant fields in the teiHeader
+		LONGDESC
 		desc "create", "create new file"
 		def create(filetype, name)
 			puts "creates a new file from template 
