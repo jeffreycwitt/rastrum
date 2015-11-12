@@ -24,8 +24,15 @@ module RastrumCLI
 			name = Dir.pwd.split("/").last
 			puts name
 			doc = Rastrum::Document.new("#{name}.xml")
-			doc.set_edno("0.1.0")
-			doc.save
+			ed_no = "0.2.0"
+			puts "setting ed number to #{ed_no}..."
+			doc.set_edno(ed_no)
+			puts "setting date..."
+			doc.set_date
+			puts "creating change entry and setting status..."
+			doc.set_change(who: "auto", status: "draft", ed_no: "0.2.0", desc: "test", collab: "yes", valscheme: "lbp-0.0.1")
+			puts "saving changes..."
+			doc.save("#{name}.xml")
 		end
 		desc "review", "perform release procedure"
 		long_desc <<-LONGDESC
