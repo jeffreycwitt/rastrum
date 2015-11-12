@@ -20,7 +20,12 @@ module RastrumCLI
 
       LONGDESC
 		def draft
-		puts "performs draft procedure"
+			puts "performs draft procedure"
+			name = Dir.pwd.split("/").last
+			puts name
+			doc = Rastrum::Document.new("#{name}.xml")
+			doc.set_edno("0.1.0")
+			doc.save
 		end
 		desc "review", "perform release procedure"
 		long_desc <<-LONGDESC
