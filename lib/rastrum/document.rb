@@ -18,6 +18,11 @@ module Rastrum
        end
 		end
 
+    def version
+      version = @doc.xpath('//tei:editionStmt/tei:edition/@n', {"tei" => "http://www.tei-c.org/ns/1.0"}).text
+      return version
+    end
+
 		def set_edno(ed_no)
 		@doc.xpath('//tei:editionStmt/tei:edition/@n', {"tei" => "http://www.tei-c.org/ns/1.0"}).each do |node|
         puts ed_no
@@ -84,7 +89,8 @@ module Rastrum
     end
     def lbptex
       filenamestem = filename.split(".").first
-      `lbp-convert #{filenamestem} output`
+      itemid = filenamestem.split("_").last
+      `lbp-convert #{filenamestem} #{itemid}-#{Date.today.to_s}-#{self.version}`
     end
     def html
         filenamestem = filename.split(".").first
@@ -117,11 +123,15 @@ module Rastrum
     def self.push(remote='origin', branch='master')
       `git push #{remote} #{master}`
     end
-    def self.update(version)
+    def self.full_update(version)
       self.stage
       self.commit("auto commit on version #{version} update")
       self.version(version)
       #self.push
+    end
+    def self.light_update(version)
+      self.stage
+      self.commit("auto commit on version #{version} update")
     end
   end
   class Tool
@@ -142,6 +152,15 @@ module Rastrum
         doc.lbptex
         doc.html
     end
+    def self.file_update_dev(filename, ed_no)
+        puts "updates version num to #{ed_no}"
+        puts filename
+        doc = Document.new(filename)
+        puts "setting ed number to #{ed_no}..."
+        doc.set_edno(ed_no)
+        puts "saving changes..."
+        doc.save(filename)
+    end
     def self.directory_update(status, ed_no)
       Dir.foreach('.') do |filename|
         # skip ., .., .git
@@ -150,12 +169,32 @@ module Rastrum
         self.file_update(filename, status, ed_no)
       end
     end
+    def self.directory_update_dev(ed_no)
+      Dir.foreach('.') do |filename|
+        # skip ., .., .git
+        next if filename == '.' or filename == '..' or filename == '.git' or filename.include? ".md" or filename == "Rastrumfile" or filename == "transcriptions.xml" or filename == "processed"
+        # do work on real items
+        self.file_update_dev(filename, ed_no)
+      end
+    end
     def self.next_version
       f = File.open("transcriptions.xml", "r")  
       doc = Nokogiri::XML(f)
       f.close
       next_version = doc.xpath('/transcriptions/@next-version').text
       return next_version
+    end
+    def self.check_version
+      Dir.foreach('.') do |filename|
+        # skip ., .., .git
+        next if filename == '.' or filename == '..' or filename == '.git' or filename.include? ".md" or filename == "Rastrumfile" or filename == "transcriptions.xml" or filename == "processed"
+        # do work on real items
+        doc = Document.new(filename)
+        version = doc.version
+        if version.split("-").first == self.next_version
+          return false
+        end
+      end
     end
   end
 end

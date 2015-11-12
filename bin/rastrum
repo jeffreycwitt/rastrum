@@ -21,10 +21,20 @@ module RastrumCLI
       LONGDESC
 		def draft
 			## Make changes to file
-			ed_no = Rastrum::Tool.next_version
-			puts ed_no
-			Rastrum::Tool.directory_update("draft", ed_no)
-			Rastrum::Repo.update(ed_no)
+			if Rastrum::Tool.check_version == false
+				puts "You've already used this version number, please update the transcriptions file"
+			else
+				#perform update
+				ed_no = Rastrum::Tool.next_version
+				Rastrum::Tool.directory_update("draft", ed_no)
+				#full git update
+				Rastrum::Repo.full_update(ed_no)
+				
+				#reset version to x.x.x-dev
+				Rastrum::Tool.directory_update_dev(ed_no + "-dev")
+				#commit changes, without tag
+				Rastrum::Repo.light_update(ed_no + "-dev")
+			end
 		end
 		desc "review", "perform release procedure"
 		long_desc <<-LONGDESC
@@ -40,8 +50,21 @@ module RastrumCLI
 
       LONGDESC
 		def review
-			Rastrum::Tool.directory_update("review")
-			puts "--after this update a push to dll should occur."
+			if Rastrum::Tool.check_version == false
+				puts "You've already used this version number, please update the transcriptions file"
+			else
+				ed_no = Rastrum::Tool.next_version
+				Rastrum::Tool.directory_update("review", ed_no)
+				#full git update
+				Rastrum::Repo.full_update(ed_no)
+				
+				#reset version to x.x.x-dev
+				Rastrum::Tool.directory_update_dev(ed_no + "-dev")
+				#commit changes, without tag
+				Rastrum::Repo.light_update(ed_no + "-dev")
+
+				puts "--after this update a push to dll should occur."
+			end
 		end
 		desc "published", "performs published procedure"
 		long_desc <<-LONGDESC
@@ -61,8 +84,20 @@ module RastrumCLI
 
       LONGDESC
 		def published
-		Rastrum::Tool.directory_update("published")
-			puts "--after this update a push to dll should occur."
+			if Rastrum::Tool.check_version == false
+				puts "You've already used this version number, please update the transcriptions file"
+			else
+				ed_no = Rastrum::Tool.next_version
+				Rastrum::Tool.directory_update("published", ed_no)
+				#full git update
+				Rastrum::Repo.full_update(ed_no)
+				
+				#reset version to x.x.x-dev
+				Rastrum::Tool.directory_update_dev(ed_no + "-dev")
+				#commit changes, without tag
+				Rastrum::Repo.light_update(ed_no + "-dev")
+				puts "--after this update a push to dll should occur and develop branch should be created"
+			end
 		end
 	end
 
