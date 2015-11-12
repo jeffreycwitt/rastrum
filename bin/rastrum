@@ -20,19 +20,11 @@ module RastrumCLI
 
       LONGDESC
 		def draft
-			puts "performs draft procedure"
-			name = Dir.pwd.split("/").last
-			puts name
-			doc = Rastrum::Document.new("#{name}.xml")
-			ed_no = "0.2.0"
-			puts "setting ed number to #{ed_no}..."
-			doc.set_edno(ed_no)
-			puts "setting date..."
-			doc.set_date
-			puts "creating change entry and setting status..."
-			doc.set_change(who: "auto", status: "draft", ed_no: "0.2.0", desc: "test", collab: "yes", valscheme: "lbp-0.0.1")
-			puts "saving changes..."
-			doc.save("#{name}.xml")
+			## Make changes to file
+			ed_no = Rastrum::Tool.next_version
+			puts ed_no
+			Rastrum::Tool.directory_update("draft", ed_no)
+			Rastrum::Repo.update(ed_no)
 		end
 		desc "review", "perform release procedure"
 		long_desc <<-LONGDESC
@@ -48,7 +40,8 @@ module RastrumCLI
 
       LONGDESC
 		def review
-		puts "performs review-version procedure"
+			Rastrum::Tool.directory_update("review")
+			puts "--after this update a push to dll should occur."
 		end
 		desc "published", "performs published procedure"
 		long_desc <<-LONGDESC
@@ -68,9 +61,11 @@ module RastrumCLI
 
       LONGDESC
 		def published
-		puts "performs published procedure"
+		Rastrum::Tool.directory_update("published")
+			puts "--after this update a push to dll should occur."
 		end
 	end
+
 	class Hotfix < Thor
 		desc "new", "creates new hotfix"
 		def new

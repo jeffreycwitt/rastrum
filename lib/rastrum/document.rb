@@ -4,10 +4,11 @@ require 'date'
 
 module Rastrum
 	class Document
-		attr_reader :doc 
+		attr_reader :doc, :filename
 		def initialize(filename)
 			f = File.open("#{filename}", "r")  
     	@doc = Nokogiri::XML(f)
+      @filename = filename
     	f.close
 		end
 
@@ -59,9 +60,102 @@ module Rastrum
         self.set_status(status)
     end
     def set_status(status)
-    	doc.xpath('//tei:RevisionDesc/@status', {"tei" => "http://www.tei-c.org/ns/1.0"}).each do |node|
+    	doc.xpath('//tei:revisionDesc/@status', {"tei" => "http://www.tei-c.org/ns/1.0"}).each do |node|
         node.content = status   
       end
+    end
+    def latex
+        filenamestem = filename.split(".").first
+        `mkdir -p processed/#{filenamestem}
+        cd processed/#{filenamestem}
+        
+        # begin xslt conversion
+        echo "Begin TEI to LaTeX conversion";
+        saxon "-s:../../#{filename}" "-xsl:/Users/JCWitt/Desktop/lombardpress-print/lbp-latex-critical.xsl" "-o:#{filenamestem}.tex";
+        
+        #stream edit for unwanted spaces
+        echo "Begin removing unwanted spaces"
+        sed -i.bak -e 's/ \{1,\}/ /g' -e 's/{ /{/g' -e 's/ }/}/g' -e 's/ :/:/g' #{filenamestem}.tex
+        echo "unwanted spaces removed"
+
+        echo "Begin LaTeX to PDF conversion; placing PDF on the desktop";
+        
+        cd ../../`
+    end
+    def lbptex
+      filenamestem = filename.split(".").first
+      `lbp-convert #{filenamestem} output`
+    end
+    def html
+        filenamestem = filename.split(".").first
+        `mkdir -p processed/#{filenamestem}
+        cd processed/#{filenamestem}
+        
+        # begin xslt conversion
+        echo "Begin TEI to LaTeX conversion";
+        saxon "-s:../../#{filename}" "-xsl:/Users/JCWitt/WebPages/lombardpress2/xslt/default/critical/clean_view.xsl" "-o:#{filenamestem}.html";
+        
+        #stream edit for unwanted spaces
+        echo "Begin removing unwanted spaces"
+        sed -i.bak -e 's/ \{1,\}/ /g' -e 's/{ /{/g' -e 's/ }/}/g' -e 's/ :/:/g' #{filenamestem}.html
+        echo "unwanted spaces removed"
+
+        cd ../../`
+    end
+  end
+
+  class Repo
+    def self.stage
+      `git add -A`
+    end
+    def self.commit(message)
+      `git commit -m "#{message}"`
+    end
+    def self.version(version)
+      `git tag v#{version}`
+    end
+    def self.push(remote='origin', branch='master')
+      `git push #{remote} #{master}`
+    end
+    def self.update(version)
+      self.stage
+      self.commit("auto commit on version #{version} update")
+      self.version(version)
+      #self.push
+    end
+  end
+  class Tool
+    def self.file_update(filename, status, ed_no)
+        puts "performs #{status} procedure"
+        puts filename
+        doc = Document.new(filename)
+        puts "setting ed number to #{ed_no}..."
+        doc.set_edno(ed_no)
+        puts "setting date..."
+        doc.set_date
+        puts "creating change entry and setting status..."
+        doc.set_change(who: "auto", status: "#{status}", ed_no: ed_no, desc: "test", collab: "yes", valscheme: "lbp-0.0.1")
+        puts "saving changes..."
+        doc.save(filename)
+        #begin processing
+        doc.latex
+        doc.lbptex
+        doc.html
+    end
+    def self.directory_update(status, ed_no)
+      Dir.foreach('.') do |filename|
+        # skip ., .., .git
+        next if filename == '.' or filename == '..' or filename == '.git' or filename.include? ".md" or filename == "Rastrumfile" or filename == "transcriptions.xml" or filename == "processed"
+        # do work on real items
+        self.file_update(filename, status, ed_no)
+      end
+    end
+    def self.next_version
+      f = File.open("transcriptions.xml", "r")  
+      doc = Nokogiri::XML(f)
+      f.close
+      next_version = doc.xpath('/transcriptions/@next-version').text
+      return next_version
     end
   end
 end
