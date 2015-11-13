@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require "bundler/setup"
 require "rastrum"
+require 'open-uri'
 require "thor"
 
 module RastrumCLI
@@ -100,7 +101,6 @@ module RastrumCLI
 			end
 		end
 	end
-
 	class Hotfix < Thor
 		desc "new", "creates new hotfix"
 		def new
@@ -110,6 +110,49 @@ module RastrumCLI
 		def release
 		puts "releases hotfix"
 		end
+	end
+	class Create < Thor
+		option :dup
+		desc "diplomatic", "create new diplomatic file"
+		long_desc <<-LONGDESC
+			"rastrum create diplomatic <prefix>" creates a new file from the prefix and repo name
+
+			--dup, the duplicate command allows the user to create a new transcription file from a copy of an existing transcription, usually an existing transcription of another witness, while changing the file name relevant fields in the teiHeader
+		LONGDESC
+		def diplomatic(prefix)
+			puts "creates a new file for diplomatic transcription"
+			if options[:dup]
+				download = open(options[:dup])
+			else
+				download = open("https://bitbucket.org/lombardpress/lombardpress-templates/raw/master/template-diplomatic.xml")
+			end
+			IO.copy_stream(download, prefix + "_" + Rastrum::Tool.dirname + ".xml")
+			doc = Rastrum::Document.new(prefix + "_" + Rastrum::Tool.dirname + ".xml")
+			doc.set_date
+			doc.set_date_orig
+			doc.save(Rastrum::Tool.dirname + ".xml")
+		end
+		option :dup
+		desc "critical", "create new critical file"
+		long_desc <<-LONGDESC
+			"rastrum create diplomatic " creates a new file from the prefix and repo name
+
+			--dup, the duplicate command allows the user to create a new transcription file from a copy of an existing transcription, usually an existing transcription of another witness, while changing the file name relevant fields in the teiHeader
+		LONGDESC
+		def critical
+			puts "creates a new critical file from template"
+			if options[:dup]
+				download = open(options[:dup])
+			else
+				download = open("https://bitbucket.org/lombardpress/lombardpress-templates/raw/master/template-critical.xml")
+			end
+			IO.copy_stream(download, Rastrum::Tool.dirname + ".xml")
+			doc = Rastrum::Document.new(Rastrum::Tool.dirname + ".xml")
+			doc.set_date
+			doc.set_date_orig
+			doc.save(Rastrum::Tool.dirname + ".xml")
+		end
+		
 	end
 
 	class Core < Thor
@@ -127,16 +170,7 @@ module RastrumCLI
 		def new(name)
 			puts "create new respository called #{name} with starter files"
 		end
-		long_desc <<-LONGDESC
-			"rastrum create <filetype> <name>" creates a new file according to a filetype designation in the Rastrumfile or in the global config settings. It's a useful command for quickly creating a new starter transcription"
-
-			--dup, the duplicate command allows the user to create a new transcription file from a copy of an existing transcription, usually an existing transcription of another witness, while changing the file name relevant fields in the teiHeader
-		LONGDESC
-		desc "create", "create new file"
-		def create(filetype, name)
-			puts "creates a new file from template 
-			based on filetype (#{filetype} called #{name}"
-		end
+		
 		desc "update", "perform update procedure"
 		def update
 			puts "creates processed files, commits, and pushes"
@@ -146,6 +180,9 @@ module RastrumCLI
 
 		desc "hotfix", "manages hotfix creation and merge"
 		subcommand "hotfix", Hotfix
+
+		desc "create", "controls create commands"
+		subcommand "create", Create
 	end
 
 	

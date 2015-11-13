@@ -22,7 +22,8 @@ module Rastrum
       version = @doc.xpath('//tei:editionStmt/tei:edition/@n', {"tei" => "http://www.tei-c.org/ns/1.0"}).text
       return version
     end
-
+    #set_edno is the setter corresponding to the version getter. 
+    #it would be better if these names matched.
 		def set_edno(ed_no)
 		@doc.xpath('//tei:editionStmt/tei:edition/@n', {"tei" => "http://www.tei-c.org/ns/1.0"}).each do |node|
         puts ed_no
@@ -31,6 +32,19 @@ module Rastrum
     end
     def set_date(date=nil)
     	doc.xpath('//tei:editionStmt/tei:edition/tei:date', {"tei" => "http://www.tei-c.org/ns/1.0"}).each do |node|
+        if date == nil
+            newDate = Date.today.to_s
+        else
+            newDate = date
+        end
+        d = Date.parse(newDate)
+        formattedDate = d.strftime('%B %d, %Y')
+        node['when'] = newDate
+        node.content = formattedDate
+      end
+    end
+    def set_date_orig(date=nil)
+      doc.xpath('//tei:publicationStmt/tei:date', {"tei" => "http://www.tei-c.org/ns/1.0"}).each do |node|
         if date == nil
             newDate = Date.today.to_s
         else
@@ -195,6 +209,10 @@ module Rastrum
           return false
         end
       end
+    end
+    def self.dirname
+      name = Dir.pwd.split("/").last
+      return name
     end
   end
 end
