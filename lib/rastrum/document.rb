@@ -1,7 +1,6 @@
 require 'nokogiri'
 require 'date'
 
-
 module Rastrum
 	class Document
 		attr_reader :doc, :filename
@@ -56,7 +55,7 @@ module Rastrum
         node.content = formattedDate
       end
     end
-    def set_change(date: nil, who: nil, status: nil, ed_no: nil, desc: nil, collab: nil, valscheme: nil)
+    def set_change(date: nil, status: nil, ed_no: nil, valscheme: nil)
         if date == nil
             newDate = Date.today.to_s
         else
@@ -65,14 +64,15 @@ module Rastrum
         
         ## this spacing is important to get (currently desired formatting)
         ## there is probably a more relable way to do this
-    	change = "
-        <change when='#{newDate}' who='#{who}' status='#{status}' n='#{ed_no}'>
-    			<p>#{desc}</p>
-    			<note type='status'>
-    				<note type='collaboration'>#{collab}</note>
-    				<note type='validating-schema'>#{valscheme}</note>
-    			</note>
-    		</change>"
+        if @filename == 'versionlog.xml'
+          change = "
+          <change when='#{newDate}' status='#{status}' n='#{ed_no}' corresp='versionlog.xml#v#{ed_no}'/>"
+        else
+          change = "
+        <change when='#{newDate}' status='#{status}' n='#{ed_no}' corresp='versionlog.xml#v#{ed_no}'>
+          <note type='validating-schema'>#{valscheme}</note>
+      	</change>"
+        end
     	@doc.xpath('//tei:revisionDesc/tei:listChange', {"tei" => "http://www.tei-c.org/ns/1.0"}).each do |node|
     	   node.prepend_child(change) 
         end
@@ -123,7 +123,10 @@ module Rastrum
         cd ../../`
     end
   end
+end
 
+## repo file 
+module Rastrum 
   class Repo
     def self.stage
       `git add -A`
@@ -148,6 +151,11 @@ module Rastrum
       self.commit("auto commit on version #{version} update")
     end
   end
+end
+
+## tool file
+
+module Rastrum
   class Tool
     def self.file_update(filename, status, ed_no)
         puts "performs #{status} procedure"
@@ -158,13 +166,16 @@ module Rastrum
         puts "setting date..."
         doc.set_date
         puts "creating change entry and setting status..."
-        doc.set_change(who: "auto", status: "#{status}", ed_no: ed_no, desc: "test", collab: "yes", valscheme: "lbp-0.0.1")
+        doc.set_change(status: "#{status}", ed_no: ed_no, valscheme: "lbp-0.0.1")
         puts "saving changes..."
         doc.save(filename)
+
         #begin processing
-        doc.latex
-        doc.lbptex
-        doc.html
+        unless filename == "versionlog"
+          doc.latex
+          doc.lbptex
+          doc.html
+        end
     end
     def self.file_update_dev(filename, ed_no)
         puts "updates version num to #{ed_no}"
@@ -175,22 +186,16 @@ module Rastrum
         puts "saving changes..."
         doc.save(filename)
     end
-    def self.directory_update(status, ed_no)
-      Dir.foreach('.') do |filename|
-        # skip ., .., .git
-        next if filename == '.' or filename == '..' or filename == '.git' or filename.include? ".md" or filename == "Rastrumfile" or filename == "transcriptions.xml" or filename == "processed"
-        # do work on real items
-        self.file_update(filename, status, ed_no)
+    
+    def self.versionlog_update(desc, ed_no)
+      if !File.exist?('versionlog.xml')
+        VersionDoc.create_version_log
       end
+      doc = VersionDoc.new('versionlog.xml')
+      doc.versionentry(desc, ed_no)
+      doc.save("versionlog.xml")
     end
-    def self.directory_update_dev(ed_no)
-      Dir.foreach('.') do |filename|
-        # skip ., .., .git
-        next if filename == '.' or filename == '..' or filename == '.git' or filename.include? ".md" or filename == "Rastrumfile" or filename == "transcriptions.xml" or filename == "processed"
-        # do work on real items
-        self.file_update_dev(filename, ed_no)
-      end
-    end
+    
     def self.next_version
       f = File.open("transcriptions.xml", "r")  
       doc = Nokogiri::XML(f)
@@ -216,3 +221,80 @@ module Rastrum
     end
   end
 end
+
+# version doc
+
+module Rastrum
+  class VersionDoc < Document
+    def versionentry(desc, ed_no)
+      ## this spacing is important to get (currently desired formatting)
+      ## there is probably a more relable way to do this
+      change = "
+      <div xml:id='v#{ed_no}'>
+        <head>Description of changes for v#{ed_no}</head>
+        <p>#{desc}</p>
+      </div>"
+      @doc.xpath('//tei:body/tei:div', {"tei" => "http://www.tei-c.org/ns/1.0"}).each do |node|
+        node.prepend_child(change) 
+      end
+    end
+    def self.create_version_log
+      #gets teiHeader Information
+      
+      title = "Version Log"
+      publisher = "LombardPress"
+      
+      #gets version entry information
+      newDate = Date.today.to_s
+      d = Date.parse(newDate)
+      formattedDate = d.strftime('%B %d, %Y')
+      
+      #builds document
+      builder = Nokogiri::XML::Builder.new do |xml|   
+      xml.TEI("xmlns" => "http://www.tei-c.org/ns/1.0"){
+          xml.teiHeader {
+              xml.fileDesc{
+                  xml.titleStmt{
+                      xml.title "#{title}"
+                  }
+                  xml.editionStmt{
+                      xml.edition('n' => "") {
+                          xml.date('when' => "#{newDate}") {xml.text "#{formattedDate}"}
+                          }
+                      }
+                  xml.publicationStmt{
+                      xml.publisher "#{publisher}"
+                      xml.availability("status" => "free") {
+                          xml.p "Published under a Creative Commons Attribution ShareAlike 3.0 License"
+
+                      }
+                      xml.date("when" => "#{newDate}") {xml.text "#{formattedDate}"}
+                  }   
+                  xml.sourceDesc {
+                      xml.p "born digital"
+                  }
+              }
+              xml.revisionDesc("status" => "draft"){
+                xml.listChange {
+
+                }
+              }
+          }
+          xml.text_ {
+              xml.body {
+                  xml.div('xml:id' => "versionlog")  {
+
+                  }
+                }
+              }
+          }
+      end
+      #writes and saves document to file
+      o = File.new("versionlog.xml", "w")
+      o.write(builder.to_xml)
+      o.close
+    end
+  end
+end
+
+

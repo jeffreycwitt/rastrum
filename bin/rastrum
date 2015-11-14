@@ -4,72 +4,146 @@ require "rastrum"
 require 'open-uri'
 require "thor"
 
+def interactive(message)
+	if options[:i] 
+		puts "#{message} (Y/N)"
+		answer = STDIN.gets.chomp
+	else 
+		answer = "Y"
+	end
+	return answer
+end
+$filename_skip_array = ['.', 
+	'..', 
+	'.git', 
+	"readme.md", 
+	"Rastrumfile", 
+	"transcriptions.xml", 
+	"processed"]
+
 module RastrumCLI
 	class Release < Thor
-		desc "draft", "perform release procedure"
+		option :i, :type => :boolean
+		desc "status", "perform release procedure for specified generic status"
 		long_desc <<-LONGDESC
-      This command performs a draft release for the contents of this directory. The procedure will run through every
-      tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "draft."
+      "rastrum release <status>"" performs a generic release for the contents of this directory. The procedure will run through every
+      tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "<status>."
 
       After completing the xml file updates, the procedure will commit the repository and tag it (e.g. v0.2.0).
 
       It will end by pushing the repository to the development respository, specified as git remote origin.
 
       -i, with -i opition, this procedure will be interactive, prompting the user for confirmation before each change to each file within the directory.
-
-      -q, with the -q option, all notices of what the procedure is doing will be silenced. The default is to be verbose.
-
-      LONGDESC
-		def draft
+		LONGDESC
+		def status(status="draft")
 			## Make changes to file
 			if Rastrum::Tool.check_version == false
 				puts "You've already used this version number, please update the transcriptions file"
 			else
-				#perform update
 				ed_no = Rastrum::Tool.next_version
-				Rastrum::Tool.directory_update("draft", ed_no)
-				#full git update
-				Rastrum::Repo.full_update(ed_no)
+
+				#updates version log
+				answer = interactive("do you want to proceed with version log entry?")
+				unless (options[:i] && answer == "N")	
+					puts "Provide version description?"
+	      	desc = STDIN.gets.chomp
+					Rastrum::Tool.versionlog_update(desc, ed_no)
+				else
+					puts "skipping version log entry"
+				end
 				
-				#reset version to x.x.x-dev
-				Rastrum::Tool.directory_update_dev(ed_no + "-dev")
+				#perform update in tei header of all xml files
+				#updates version log
+				answer = interactive("do you want update version numbers and status in tei files, and then create processed html and latex files?")
+				unless (options[:i] && answer == "N")	
+					Dir.foreach('.') do |filename|
+        		# skip ., .., .git, etc.
+        		next if $filename_skip_array.include? filename
+        		# do work on real items
+        		newanswer = interactive("do you want to run full update on #{filename}?")
+        		unless (options[:i] && newanswer == "N")
+        			Rastrum::Tool.file_update(filename, status, ed_no)
+        		end
+        	end
+				else
+					puts "skipping version number and status update in tei files"
+				end
+
+				#full git update
+				answer = interactive("do you want git commit and push?")
+				unless (options[:i] && answer == "N")	
+					Rastrum::Repo.full_update(ed_no)
+				else
+					puts "skipping git commit, tag, and push"
+				end
+				
+				#reset version in tei header to x.x.x-dev 
+				answer = interactive("do you want reset the version numbers to x.x.x-dev?")
+				unless (options[:i] && answer == "N")	
+					Dir.foreach('.') do |filename|
+        		# skip ., .., .git, etc.
+        		next if $filename_skip_array.include? filename
+        		# do work on real items
+        		newanswer = interactive("do you want to add '-dev' suffix on ed numbers in #{filename}?")
+        		unless (options[:i] && newanswer == "N")
+        			Rastrum::Tool.file_update_dev(filename, ed_no + "-dev")
+        		end
+        	end
+				else
+					puts "skipping version reset to x.x.x-dev"
+				end
+				
 				#commit changes, without tag
-				Rastrum::Repo.light_update(ed_no + "-dev")
+				answer = interactive("do you want to do a final git commit after setting version to x.x.x-dev?")
+				unless (options[:i] && answer == "N")	
+					Rastrum::Repo.light_update(ed_no + "-dev")
+				else
+					puts "skipping version reset to x.x.x-dev"
+				end
 			end
 		end
-		desc "review", "perform release procedure"
+		option :i, :type => :boolean
+		desc "draft", "perform release procedure for draft status"
 		long_desc <<-LONGDESC
-      This command performs a review-version release for the contents of this directory. The procedure will run through every tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "review-version." 
+      "rastrum release draft" performs a draft release for the contents of this directory. The procedure will run through every tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "draft." 
 
       After completing the xml file updates, the procedure will commit the repository and tag it (e.g. v0.2.0).
 
-      It will end by pushing the repository to both to the development respository, specified as git remote origin, and the review repository specified as git remote dll
+      It will end by pushing the repository to both to the development respository, specified as git remote origin.
 
-      -i, with -i opition, this procedure will be interactive, prompting the user for confirmation before each change to each file within the directory.
+      -i, with -i option, this procedure will be interactive, prompting the user for confirmation before each change to each file within the directory.
+		LONGDESC
+		def draft
+			if Rastrum::Tool.check_version == false
+				puts "You've already used this version number, please update the transcriptions file"
+			else
+				self.status("draft")
+				puts "any draft specific procedures would go here "
+			end
+		end
+		option :i, :type => :boolean
+		desc "review", "perform release procedure"
+		long_desc <<-LONGDESC
+    "rastrum release reiew" performs a review release for the contents of this directory. The procedure will run through every tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "review-version." 
 
-      -q, with the -q option, all notices of what the procedure is doing will be silenced. The default is to be verbose.
+    After completing the xml file updates, the procedure will commit the repository and tag it (e.g. v0.2.0).
 
-      LONGDESC
+    It will end by pushing the repository to both to the development respository, specified as git remote origin, and the review repository specified as git remote dll
+
+    -i, with -i option, this procedure will be interactive, prompting the user for confirmation before each change to each file within the directory.
+		LONGDESC
 		def review
 			if Rastrum::Tool.check_version == false
 				puts "You've already used this version number, please update the transcriptions file"
 			else
-				ed_no = Rastrum::Tool.next_version
-				Rastrum::Tool.directory_update("review", ed_no)
-				#full git update
-				Rastrum::Repo.full_update(ed_no)
-				
-				#reset version to x.x.x-dev
-				Rastrum::Tool.directory_update_dev(ed_no + "-dev")
-				#commit changes, without tag
-				Rastrum::Repo.light_update(ed_no + "-dev")
-
+				self.status("review")
 				puts "--after this update a push to dll should occur."
 			end
 		end
+		option :i, :type => :boolean
 		desc "published", "performs published procedure"
 		long_desc <<-LONGDESC
-      This command performs a published release for the contents of this directory. The procedure will run through every tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "published."
+      "rastrum release published" performs a published release for the contents of this directory. The procedure will run through every tei document within the directory, change the edition number to the next edition number specified in the version.xml file. At the same time it will log a new entry into the revision description, and record the most current of the status as "published."
 
       After completing the xml file updates, the procedure will commit the repository and tag it (e.g. v1.0.0).
 
@@ -81,22 +155,12 @@ module RastrumCLI
 
       -i, with -i opition, this procedure will be interactive, prompting the user for confirmation before each change to each file within the directory.
 
-      -q, with the -q option, all notices of what the procedure is doing will be silenced. The default is to be verbose.
-
       LONGDESC
 		def published
 			if Rastrum::Tool.check_version == false
 				puts "You've already used this version number, please update the transcriptions file"
 			else
-				ed_no = Rastrum::Tool.next_version
-				Rastrum::Tool.directory_update("published", ed_no)
-				#full git update
-				Rastrum::Repo.full_update(ed_no)
-				
-				#reset version to x.x.x-dev
-				Rastrum::Tool.directory_update_dev(ed_no + "-dev")
-				#commit changes, without tag
-				Rastrum::Repo.light_update(ed_no + "-dev")
+				self.status("published")
 				puts "--after this update a push to dll should occur and develop branch should be created"
 			end
 		end
