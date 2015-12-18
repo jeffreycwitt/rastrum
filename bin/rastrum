@@ -194,7 +194,7 @@ module RastrumCLI
 			doc = Rastrum::Document.new(prefix + "_" + Rastrum::Tool.dirname + ".xml")
 			doc.set_date
 			doc.set_date_orig
-			doc.save(Rastrum::Tool.dirname + ".xml")
+			doc.save(prefix + "_" + Rastrum::Tool.dirname + ".xml")
 		end
 		option :dup
 		desc "critical", "create new critical file"
