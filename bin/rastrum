@@ -52,21 +52,35 @@ module RastrumCLI
 					puts "skipping version log entry"
 				end
 				
-				#perform update in tei header of all xml files
-				#updates version log
-				answer = interactive("do you want update version numbers and status in tei files, and then create processed html and latex files?")
+				#perform update in tei header of all xml files in directory
+				answer = interactive("do you want update version numbers and status in tei files")
 				unless (options[:i] && answer == "N")	
 					Dir.foreach('.') do |filename|
         		# skip ., .., .git, etc.
         		next if $filename_skip_array.include? filename
         		# do work on real items
-        		newanswer = interactive("do you want to run full update on #{filename}?")
+        		newanswer = interactive("do you want to run full update on #{filename}? (Y/N)")
         		unless (options[:i] && newanswer == "N")
         			Rastrum::Tool.file_update(filename, status, ed_no)
         		end
         	end
 				else
 					puts "skipping version number and status update in tei files"
+				end
+
+				answer = interactive("do you want to create processed html and latex files?")
+				unless (options[:i] && answer == "N")	
+					Dir.foreach('.') do |filename|
+        		# skip ., .., .git, etc.
+        		next if $filename_skip_array.include? filename
+        		# do work on real items
+        		newanswer = interactive("do you want to produce a processed files for #{filename} (Y/N)?")
+        		unless (options[:i] && newanswer == "N")
+        			Rastrum::Tool.process(filename)
+        		end
+        	end
+				else
+					puts "skipping creation of processed files"
 				end
 
 				#full git update
