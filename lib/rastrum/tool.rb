@@ -2,7 +2,7 @@
 
 module Rastrum
   class Tool
-    def process_file(filename)
+    def self.process_file(filename)
      #begin processing
       doc = Document.new(filename)
       unless filename == "versionlog"
@@ -55,7 +55,7 @@ module Rastrum
     def self.check_version
       Dir.foreach('.') do |filename|
         # skip ., .., .git
-        next if filename == '.' or filename == '..' or filename == '.git' or filename.include? ".md" or filename == "Rastrumfile" or filename == "transcriptions.xml" or filename == "processed"
+        next if filename == '.' or filename == '..' or filename == '.git' or filename.include? ".md" or filename == "Rastrumfile" or filename == "transcriptions.xml" or filename == "processed" or filename == ".DS_Store"
         # do work on real items
         doc = Document.new(filename)
         version = doc.version

@@ -19,7 +19,8 @@ $filename_skip_array = ['.',
 	"readme.md", 
 	"Rastrumfile", 
 	"transcriptions.xml", 
-	"processed"]
+	"processed",
+	".DS_Store"]
 
 module RastrumCLI
 	class Release < Thor
@@ -59,7 +60,7 @@ module RastrumCLI
         		# skip ., .., .git, etc.
         		next if $filename_skip_array.include? filename
         		# do work on real items
-        		newanswer = interactive("do you want to run full update on #{filename}? (Y/N)")
+        		newanswer = interactive("do you want to run full update on #{filename}?")
         		unless (options[:i] && newanswer == "N")
         			Rastrum::Tool.file_update(filename, status, ed_no)
         		end
@@ -74,9 +75,9 @@ module RastrumCLI
         		# skip ., .., .git, etc.
         		next if $filename_skip_array.include? filename
         		# do work on real items
-        		newanswer = interactive("do you want to produce a processed files for #{filename} (Y/N)?")
+        		newanswer = interactive("do you want to produce a processed files for #{filename}?")
         		unless (options[:i] && newanswer == "N")
-        			Rastrum::Tool.process(filename)
+        			Rastrum::Tool.process_file(filename)
         		end
         	end
 				else

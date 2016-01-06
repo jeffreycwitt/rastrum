@@ -5,10 +5,10 @@ module Rastrum
 	class Document
 		attr_reader :doc, :filename
 		def initialize(filename)
-			f = File.open("#{filename}", "r")  
-    	@doc = Nokogiri::XML(f)
-      @filename = filename
-    	f.close
+		   f = File.open("#{filename}", "r")  
+    	   @doc = Nokogiri::XML(f)
+           @filename = filename
+    	   f.close
 		end
 
 		def save(filename)
