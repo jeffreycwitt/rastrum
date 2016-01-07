@@ -8,7 +8,7 @@ module Rastrum
       `git commit -m "#{message}"`
     end
     def self.version(version)
-      `git tag v#{version}`
+      `git tag #{version}`
     end
     def self.push(remote='origin', branch='master')
       `git push #{remote} #{branch}`
