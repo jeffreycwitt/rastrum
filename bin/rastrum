@@ -69,6 +69,9 @@ module RastrumCLI
 					puts "skipping version number and status update in tei files"
 				end
 
+## i'm thinking about deleting this; I think a processed folder deletes the purity of the repo
+## processed files can be made at version commits and stored elsehwere for archive purposes
+=begin
 				answer = interactive("do you want to create processed html and latex files?")
 				unless (options[:i] && answer == "N")	
 					Dir.foreach('.') do |filename|
@@ -83,7 +86,7 @@ module RastrumCLI
 				else
 					puts "skipping creation of processed files"
 				end
-
+=end
 				#full git update
 				answer = interactive("do you want git commit and push?")
 				unless (options[:i] && answer == "N")	
